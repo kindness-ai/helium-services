@@ -2,6 +2,7 @@
 - name: Update services runner
   hosts: servers
   gather_facts: false
+  become: true
   strategy: linear
   serial: 1
   tasks:

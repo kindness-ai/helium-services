@@ -1,7 +1,7 @@
 # Deploys via Ansible (deploy/update.yml) over SSH to your host (e.g. AWS EC2).
 #
 # Required secrets:
-#   DEPLOY_SSH_PRIVATE_KEY — PEM OpenSSH private key (runner connects as root per deploy/ansible.cfg)
+#   DEPLOY_SSH_PRIVATE_KEY — PEM for SSH (default login user: ubuntu per deploy/ansible.cfg; sudo used for root tasks)
 #   ANSIBLE_HOSTS_YML       — full contents of deploy/hosts.yml (see deploy/hosts.yml.example)
 #   DEPLOY_DOTENV           — full contents of repo-root .env (SERVICES_HOSTNAME, TLS email, etc.)
 #
