@@ -7,6 +7,9 @@ private
 # ansible hosts file
 deploy/hosts.yml
 
+# GitHub read-only deploy key (written from GITHUB_REPO_DEPLOY_KEY in CI)
+deploy/files/github_deploy_key
+
 # compose override file
 compose.override.yml
 !deploy/**/compose.override.yml

@@ -4,12 +4,46 @@
     name: git
     state: present
 
+- name: Check for GitHub deploy key on Ansible controller
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/files/github_deploy_key"
+  register: gh_deploy_key_file
+  delegate_to: localhost
+  run_once: true
+  become: false
+
+- name: Ensure root .ssh directory exists on server
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    mode: "0700"
+  when: gh_deploy_key_file.stat.exists
+
+- name: Install GitHub read-only deploy key on server
+  ansible.builtin.copy:
+    src: files/github_deploy_key
+    dest: /root/.ssh/helium_services_readonly
+    mode: "0600"
+  when: gh_deploy_key_file.stat.exists
+  no_log: true
+
 - name: Ensure up to date clone
+  vars:
+    _use_ssh: "{{ gh_deploy_key_file.stat.exists }}"
+    _repo: >-
+      {{
+        services_git_repo | default(
+          'git@github.com:kindness-ai/helium-services.git' if gh_deploy_key_file.stat.exists
+          else 'https://github.com/kindness-ai/helium-services.git'
+        )
+      }}
   ansible.builtin.git:
-    repo: https://github.com/imputnet/helium-services.git
+    repo: "{{ _repo }}"
     dest: /opt/services
-    version: main
+    version: "{{ services_git_version | default('main') }}"
     update: true
+    key_file: "{{ '/root/.ssh/helium_services_readonly' if _use_ssh else omit }}"
+    accept_hostkey: "{{ _use_ssh }}"
 
 - name: Copy over compose override
   when: multi_deployment is defined and multi_deployment

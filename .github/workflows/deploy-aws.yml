@@ -1,0 +1,80 @@
+# Deploys via Ansible (deploy/update.yml) over SSH to your host (e.g. AWS EC2).
+#
+# Required secrets:
+#   DEPLOY_SSH_PRIVATE_KEY — PEM OpenSSH private key (runner connects as root per deploy/ansible.cfg)
+#   ANSIBLE_HOSTS_YML       — full contents of deploy/hosts.yml (see deploy/hosts.yml.example)
+#   DEPLOY_DOTENV           — full contents of repo-root .env (SERVICES_HOSTNAME, TLS email, etc.)
+#
+# Required when github.com/kindness-ai/helium-services is private (server-side git clone over SSH):
+#   GITHUB_REPO_DEPLOY_KEY — read-only deploy key private key (see aws.md)
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible and collections
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ansible ssh-client
+          ansible-galaxy collection install -r "${GITHUB_WORKSPACE}/deploy/requirements.yml"
+
+      - name: Write SSH key
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${KEY}"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' \
+            'Host *' \
+            '  StrictHostKeyChecking accept-new' \
+            '  IdentityFile ~/.ssh/deploy_key' \
+            > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Write inventory and .env
+        env:
+          HOSTS_YML: ${{ secrets.ANSIBLE_HOSTS_YML }}
+          DOTENV: ${{ secrets.DEPLOY_DOTENV }}
+        run: |
+          set -euo pipefail
+          test -n "${HOSTS_YML}"
+          test -n "${DOTENV}"
+          printf '%s\n' "${HOSTS_YML}" > "${GITHUB_WORKSPACE}/deploy/hosts.yml"
+          printf '%s\n' "${DOTENV}" > "${GITHUB_WORKSPACE}/.env"
+
+      - name: Write GitHub repo deploy key for Ansible
+        env:
+          KEY: ${{ secrets.GITHUB_REPO_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/deploy/files"
+          if [ -n "${KEY:-}" ]; then
+            printf '%s\n' "${KEY}" > "${GITHUB_WORKSPACE}/deploy/files/github_deploy_key"
+            chmod 600 "${GITHUB_WORKSPACE}/deploy/files/github_deploy_key"
+          else
+            rm -f "${GITHUB_WORKSPACE}/deploy/files/github_deploy_key"
+          fi
+
+      - name: Run Ansible update playbook
+        working-directory: deploy
+        run: |
+          set -euo pipefail
+          ansible-playbook -i hosts.yml update.yml

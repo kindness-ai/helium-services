@@ -1,0 +1,60 @@
+# Daily merge from upstream and open a PR into this repo's default branch.
+# Set repository variable UPSTREAM_REPOSITORY (e.g. imputnet/helium-services) or rely on the default.
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPOSITORY: ${{ vars.UPSTREAM_REPOSITORY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge upstream and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          UPSTREAM="${UPSTREAM_REPOSITORY:-imputnet/helium-services}"
+          git remote add upstream "https://github.com/${UPSTREAM}.git" 2>/dev/null || \
+            git remote set-url upstream "https://github.com/${UPSTREAM}.git"
+
+          git fetch upstream main
+          git checkout main
+          git pull origin main
+
+          BEHIND="$(git rev-list --count main..upstream/main || echo 0)"
+          if [ "${BEHIND}" -eq 0 ]; then
+            echo "Already up to date with upstream/main."
+            exit 0
+          fi
+
+          BRANCH="sync/upstream-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
+          git checkout -b "${BRANCH}"
+          git merge upstream/main --no-edit
+          git push -u origin "${BRANCH}"
+
+          gh pr create \
+            --base main \
+            --head "${BRANCH}" \
+            --title "chore: sync upstream (${UPSTREAM})" \
+            --body "Automated daily sync merging \`${UPSTREAM}\` \`main\` into this fork. Conflicts, if any, must be resolved manually."
