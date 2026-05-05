@@ -6,7 +6,7 @@
 #   DEPLOY_DOTENV           — full contents of repo-root .env (SERVICES_HOSTNAME, TLS email, etc.)
 #
 # Required when github.com/kindness-ai/helium-services is private (server-side git clone over SSH):
-#   GITHUB_REPO_DEPLOY_KEY — read-only deploy key private key (see aws.md)
+#   REPO_CLONE_KEY — read-only deploy key private key (see aws.md)
 name: Deploy to AWS
 
 on:
@@ -62,7 +62,7 @@ jobs:
 
       - name: Write GitHub repo deploy key for Ansible
         env:
-          KEY: ${{ secrets.GITHUB_REPO_DEPLOY_KEY }}
+          KEY: ${{ secrets.REPO_CLONE_KEY }}
         run: |
           set -euo pipefail
           mkdir -p "${GITHUB_WORKSPACE}/deploy/files"
