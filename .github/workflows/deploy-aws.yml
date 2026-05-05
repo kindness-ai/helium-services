@@ -6,7 +6,7 @@
 #   DEPLOY_DOTENV           — full contents of repo-root .env (SERVICES_HOSTNAME, TLS email, etc.)
 #
 # Required when github.com/kindness-ai/helium-services is private (server-side git clone over SSH):
-#   REPO_CLONE_KEY — read-only deploy key private key (see aws.md)
+#   GITHUB_REPO_DEPLOY_KEY — read-only deploy key private key (see aws.md)
 name: Deploy to AWS
 
 on:
@@ -37,10 +37,7 @@ jobs:
           KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          if [ -z "${KEY:-}" ]; then
-            echo "::error::Secret DEPLOY_SSH_PRIVATE_KEY is missing or empty. Add it under Settings → Secrets and variables → Actions (PEM private key for SSH to the server as root)."
-            exit 1
-          fi
+          test -n "${KEY}"
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "${KEY}" > ~/.ssh/deploy_key
@@ -58,20 +55,14 @@ jobs:
           DOTENV: ${{ secrets.DEPLOY_DOTENV }}
         run: |
           set -euo pipefail
-          if [ -z "${HOSTS_YML:-}" ]; then
-            echo "::error::Secret ANSIBLE_HOSTS_YML is missing or empty. Add the full deploy/hosts.yml body under Settings → Secrets and variables → Actions."
-            exit 1
-          fi
-          if [ -z "${DOTENV:-}" ]; then
-            echo "::error::Secret DEPLOY_DOTENV is missing or empty. Add the full .env file contents under Settings → Secrets and variables → Actions."
-            exit 1
-          fi
+          test -n "${HOSTS_YML}"
+          test -n "${DOTENV}"
           printf '%s\n' "${HOSTS_YML}" > "${GITHUB_WORKSPACE}/deploy/hosts.yml"
           printf '%s\n' "${DOTENV}" > "${GITHUB_WORKSPACE}/.env"
 
       - name: Write GitHub repo deploy key for Ansible
         env:
-          KEY: ${{ secrets.REPO_CLONE_KEY }}
+          KEY: ${{ secrets.GITHUB_REPO_DEPLOY_KEY }}
         run: |
           set -euo pipefail
           mkdir -p "${GITHUB_WORKSPACE}/deploy/files"
