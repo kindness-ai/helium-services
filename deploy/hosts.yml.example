@@ -2,7 +2,7 @@ servers:
   hosts:
     example:
       ansible_host: 10.13.37.1
-      # Default SSH user is ubuntu (deploy/ansible.cfg). For root SSH hosts:
+      # Default SSH user is admin (deploy/ansible.cfg). For root SSH hosts:
       # ansible_user: root
       # ansible_become: false
       ## Do not configure or include bgp_host in your
