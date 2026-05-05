@@ -6,7 +6,7 @@ Private fork of the Helium browser services for Kindness, hosted on *helium.k7.e
 
 ## To use Kindness's Helium services, you will need to:
 
-1. Download and install the Helium browser from the [Helium website](https://www.helium.imput.net/).
+1. Download and install the Helium browser from the [Helium website](https://helium.computer).
 2. During the setup or if already setup, add the following URL to "Use your own instance of Helium Services" setting on helium://settings/privacy/services: `https://helium.k7.engineer`
 
 ![Add "helium.k7.engineer" to Helium browser settings](docs/helium_settings.png)
